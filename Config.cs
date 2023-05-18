@@ -27,5 +27,32 @@ namespace SCPExpansionPack
 
         [Description("Should 096 target notification appear?")]
         public bool targetNotification { get; set; } = true;
+
+        [Description("Are powershortages enabled?")]
+        public bool powerShortageEnabled { get; set; } = true;
+
+        [Description("Minimum time of blackout (seconds)")]
+        public int minBlackout { get; set; } = 0;
+
+        [Description("Maximum time of blackout (seconds)")]
+        public int maxBlackout { get; set; } = 3;
+
+        [Description("Initial delay of first blackout (seconds)")]
+        public int initialBlackoutDelay { get; set; } = 300;
+
+        [Description("Min time between next blackout (seconds)")]
+        public int minBlackoutDelay { get; set; } = 90;
+
+        [Description("Max time between next blackout (seconds)")]
+        public int maxBlackoutDelay { get; set; } = 180;
+
+        [Description("Chance of blackouts to be enabled in certain round. (0-100)")]
+        public int blackoutChance { get; set; } = 15;
+
+        [Description("Enable Cassie Message: Nuke?")]
+        public bool enabledCassieNuke { get; set; } = true;
+
+        [Description("Enable Cassie Message: Blackout?")]
+        public bool enabledCassieBlackout { get; set; } = true;
     }
 }

@@ -4,9 +4,12 @@ using Ninject;
 using Synapse3.SynapseModule;
 using Synapse3.SynapseModule.Events;
 using Synapse3.SynapseModule.Map;
+using Synapse3.SynapseModule.Map.Objects;
+using Synapse3.SynapseModule.Map.Rooms;
 using Synapse3.SynapseModule.Player;
 using System;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 
 namespace SCPExpansionPack
@@ -16,6 +19,65 @@ namespace SCPExpansionPack
     {
         [Inject]
         public Plugin plugin { get; set; }
+        public bool shouldBlackout = true;
+
+        [EventHandler]
+        public async void CheckForGens(RoundStartEvent ev)
+        {
+            CassieService cassieService = Synapse.Get<CassieService>();
+            MapService mapService = Synapse.Get<MapService>();
+            int count = 0;
+            while (true)
+            {
+                await Task.Delay(500);
+                count = 0;
+                foreach (SynapseGenerator generator in mapService.SynapseGenerators)
+                {
+                    if (generator.Engaged == true) count++;
+                }
+                if (count > 2)
+                {
+                    shouldBlackout = false;
+                    if(plugin.Config.enabledCassieBlackout)
+                    {
+                        cassieService.Announce(plugin.Translation.CassieMessageBlackoutEnd);
+                    }
+                    break;
+                }
+            }
+        }
+
+
+        [EventHandler]
+        public async void Blackout(RoundStartEvent ev)
+        {
+            if(plugin.Config.powerShortageEnabled)
+            {
+                CassieService cassieService = Synapse.Get<CassieService>();
+                Random rng = new Random();
+                if (new Random().Next(0, 100) < plugin.Config.blackoutChance)
+                {
+                    await Task.Delay(plugin.Config.initialBlackoutDelay * 1000);
+                    if (plugin.Config.enabledCassieBlackout)
+                    {
+                        cassieService.Announce(plugin.Translation.CassieMessageBlackoutStart);
+                    }
+                    RoomService roomService = Synapse.Get<RoomService>();
+                    while (true)
+                    {
+                        if (!shouldBlackout) break;
+                        foreach (SynapseRoom room in roomService.Rooms)
+                        {
+                            if (room.ZoneType != ZoneType.Entrance && room.ZoneType != ZoneType.Surface)
+                            {
+                                room.TurnOffLights(rng.Next(plugin.Config.minBlackout, plugin.Config.maxBlackout));
+                            }
+                        }
+                        await Task.Delay(rng.Next(plugin.Config.minBlackoutDelay, plugin.Config.maxBlackoutDelay) * 1000);
+                    }
+                }
+            }
+        }
 
         [EventHandler]
         public async void Coin(DoorInteractEvent ev)
@@ -56,9 +118,16 @@ namespace SCPExpansionPack
             {
                 NukeService nukeService = Synapse.Get<NukeService>();
                 CassieService cassieService = Synapse.Get<CassieService>();
-                await Task.Delay((plugin.Config.nukeDelay - 85) * 1000);
-                cassieService.Announce(plugin.Translation.CassieMessageO5);
-                await Task.Delay(60000);
+                if(plugin.Config.enabledCassieNuke)
+                {
+                    await Task.Delay((plugin.Config.nukeDelay - 85) * 1000);
+                    cassieService.Announce(plugin.Translation.CassieMessageO5);
+                    await Task.Delay(60000);
+                }
+                else
+                {
+                    await Task.Delay(plugin.Config.nukeDelay * 1000);
+                }
                 nukeService.InsidePanel.Locked = true;
                 nukeService.StartDetonation();
             }
